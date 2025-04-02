@@ -1,28 +1,19 @@
 import kotlinx.coroutines.runBlocking
 import repository.UserRepository
 import ui.displayUser
+import ui.printMenu
+
 
 fun main() {
     val userRepository = UserRepository()
 
     while (true) {
-        println(" __  __ ______ _   _ _    _ \n" +
-                "|  \\/  |  ____| \\ | | |  | |\n" +
-                "| \\  / | |__  |  \\| | |  | |\n" +
-                "| |\\/| |  __| | . ` | |  | |\n" +
-                "| |  | | |____| |\\  | |__| |\n" +
-                "|_|  |_|______|_| \\_|\\____/ \n")
-        println("1. Fetch GitHub user information by username")
-        println("2. Display cached users")
-        println("3. Search cached users by username")
-        println("4. Search cached users by repository name")
-        println("5. Exit")
-        print("Please choose an option: ")
+        printMenu()
 
-        when (readLine()?.trim()) {
+        when (readlnOrNull()?.trim()) {
             "1" -> {
                 print("Enter GitHub username: ")
-                val username = readLine()?.trim()
+                val username = readlnOrNull()?.trim()
                 if (username.isNullOrEmpty()) {
                     println("Username cannot be empty.")
                     continue
@@ -37,6 +28,7 @@ fun main() {
                     }
                 }
             }
+
             "2" -> {
                 val allUsers = userRepository.getAllUsers()
                 if (allUsers.isEmpty()) {
@@ -46,9 +38,10 @@ fun main() {
                     allUsers.forEach { displayUser(it) }
                 }
             }
+
             "3" -> {
                 print("Enter username to search: ")
-                val query = readLine()?.trim()
+                val query = readlnOrNull()?.trim()
                 if (query.isNullOrEmpty()) {
                     println("Search query cannot be empty.")
                     continue
@@ -61,9 +54,10 @@ fun main() {
                     results.forEach { displayUser(it) }
                 }
             }
+
             "4" -> {
                 print("Enter repository name to search: ")
-                val query = readLine()?.trim()
+                val query = readlnOrNull()?.trim()
                 if (query.isNullOrEmpty()) {
                     println("Search query cannot be empty.")
                     continue
@@ -76,10 +70,12 @@ fun main() {
                     results.forEach { displayUser(it) }
                 }
             }
+
             "5" -> {
                 println("Exiting program. Goodbye!")
                 return
             }
+
             else -> println("Invalid option. Please try again.")
         }
     }
