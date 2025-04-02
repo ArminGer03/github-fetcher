@@ -40,11 +40,11 @@ class UserRepository {
 
     // Searches cached users by username
     fun searchByUsername(query: String): List<CachedUser> {
-        return cache.values.filter { it.user.login.contains(query, ignoreCase = true) }
+        return cache.values.filter { it.user.login.equals(query, ignoreCase = true) }
     }
 
     // Searches cached users by repository name
     fun searchByRepoName(query: String): List<CachedUser> {
-        return cache.values.filter { user -> user.repos.any { it.name.contains(query, ignoreCase = true) } }
+        return cache.values.filter { user -> user.repos.any { it.name.equals(query, ignoreCase = true) } }
     }
 }
