@@ -4,18 +4,61 @@ import model.CachedUser
 import network.RetrofitClient
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import java.io.File
+import com.google.gson.Gson
+import com.google.gson.reflect.TypeToken
 
 class UserRepository {
-    // In-memory cache to store fetched users
     private val cache = mutableMapOf<String, CachedUser>()
+    private val cacheFilePath = "cache.json"
+    private val gson = Gson()
 
-    // Retrieves a user from the cache or fetches it via API if not present
-    suspend fun getUser(username: String): CachedUser? {
-        // Check in memory cache
-        cache[username.lowercase()]?.let {
-            return it
+    data class CacheWrapper(val cachedUsers: List<CachedUser>)
+
+    init {
+        loadCache()
+    }
+
+    private fun loadCache() {
+        val file = File(cacheFilePath)
+        if (file.exists()) {
+            try {
+                val json = file.readText()
+                val type = object : TypeToken<CacheWrapper>() {}.type
+                val wrapper: CacheWrapper = gson.fromJson(json, type)
+                wrapper.cachedUsers.forEach { user ->
+                    cache[user.user.login.lowercase()] = user
+                }
+                println("Cache loaded from file with ${cache.size} user(s).")
+            } catch (e: Exception) {
+                println("Error loading cache: ${e.message}")
+            }
         }
-        // If not in cache, fetch from API
+    }
+
+    private fun saveCache() {
+        try {
+            val wrapper = CacheWrapper(cache.values.toList())
+            val json = gson.toJson(wrapper)
+            File(cacheFilePath).writeText(json)
+        } catch (e: Exception) {
+            println("Error saving cache: ${e.message}")
+        }
+    }
+
+    private fun addUser(cachedUser: CachedUser) {
+        cache[cachedUser.user.login.lowercase()] = cachedUser
+        saveCache()
+    }
+
+    suspend fun getUser(username: String, forceUpdate: Boolean = false): CachedUser? {
+        val key = username.lowercase()
+        if (!forceUpdate) {
+            cache[key]?.let {
+                return it
+            }
+        }
+
         return withContext(Dispatchers.IO) {
             try {
                 val userResponse = RetrofitClient.apiService.getUser(username)
@@ -24,7 +67,7 @@ class UserRepository {
                     val reposResponse = RetrofitClient.apiService.getRepos(username)
                     val repos = if (reposResponse.isSuccessful) reposResponse.body()!! else emptyList()
                     val cachedUser = CachedUser(user, repos)
-                    cache[username.lowercase()] = cachedUser
+                    addUser(cachedUser)
                     cachedUser
                 } else {
                     null
@@ -35,15 +78,12 @@ class UserRepository {
         }
     }
 
-    // Returns all cached users
     fun getAllUsers(): List<CachedUser> = cache.values.toList()
 
-    // Searches cached users by username
     fun searchByUsername(query: String): List<CachedUser> {
         return cache.values.filter { it.user.login.equals(query, ignoreCase = true) }
     }
 
-    // Searches cached users by repository name
     fun searchByRepoName(query: String): List<CachedUser> {
         return cache.values.filter { user -> user.repos.any { it.name.equals(query, ignoreCase = true) } }
     }
